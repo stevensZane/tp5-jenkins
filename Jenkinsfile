@@ -27,19 +27,19 @@ pipeline {
         stage("Build Docker Image") {
             steps {
                 script {
-                    sh "docker build -t $DOCKER_IMAGE ."
+                    bat "docker build -t $DOCKER_IMAGE ."
                 }
             }
         }
         // Étape 4 : Publication de l'image sur Docker Hub
-        stage("Push image to Docker Hub") {
+        stage("Pubat image to Docker Hub") {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'stevenszane-id', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASSWORD')]){
-                    sh """
+                    bat """
                     docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD}
                     echo 'Docker login successful'
-                    docker push $DOCKER_IMAGE
+                    docker pubat $DOCKER_IMAGE
                     """
                     }
                 }
@@ -49,7 +49,7 @@ pipeline {
         stage("Deploy") {
             steps {
                 script {
-                    sh """
+                    bat """
                     # Arrête le conteneur s'il existe
                     docker container stop $DOCKER_CONTAINER || true
                     # supprime le conteneur s'il existe
