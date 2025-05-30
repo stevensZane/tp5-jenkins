@@ -1,12 +1,241 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="transition-colors duration-300">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Website</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Fancy To-Do App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .strike {
+      text-decoration: line-through;
+      opacity: 0.6;
+    }
+  </style>
 </head>
-<body>
-    <h1>Jenkins, Docker et Github</h1>
-    <p>Deploiment CI CD</p>
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 transition-colors duration-300 min-h-screen flex flex-col items-center px-4 py-6">
+
+  <div class="w-full max-w-xl">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-3xl font-bold">📝 Fancy To-Do App</h1>
+      <button id="themeToggle" class="bg-gray-200 dark:bg-gray-700 p-2 rounded">
+        🌗
+      </button>
+    </div>
+
+    <!-- Add Task -->
+    <form id="todoForm" class="flex flex-col sm:flex-row gap-3 mb-4">
+      <input id="taskInput" type="text" placeholder="Add a new task..." class="flex-1 px-4 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 focus:outline-none" required>
+      <input id="dueDate" type="date" class="px-3 py-2 rounded border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
+      <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded">Add</button>
+    </form>
+
+    <!-- Filters -->
+    <div class="flex items-center justify-between text-sm mb-2">
+      <div id="counter">0 of 0 completed</div>
+      <div class="flex gap-2">
+        <button class="filter-btn px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" data-filter="all">All</button>
+        <button class="filter-btn px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" data-filter="active">Active</button>
+        <button class="filter-btn px-2 py-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700" data-filter="completed">Completed</button>
+      </div>
+    </div>
+
+    <!-- Sort -->
+    <div class="flex items-center justify-end text-sm mb-3">
+      <label for="sort" class="mr-2">Sort:</label>
+      <select id="sort" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-2 py-1">
+        <option value="newest">Newest</option>
+        <option value="alpha">Alphabetical</option>
+      </select>
+    </div>
+
+    <!-- Task List -->
+    <ul id="taskList" class="space-y-2"></ul>
+
+    <!-- Motivational Message -->
+    <p id="quote" class="text-center mt-6 italic text-sm text-gray-600 dark:text-gray-400"></p>
+  </div>
+
+  <!-- 🎉 Confetti -->
+  <canvas id="confettiCanvas" class="fixed top-0 left-0 w-full h-full pointer-events-none"></canvas>
+
+  <script>
+    const taskInput = document.getElementById('taskInput');
+    const taskList = document.getElementById('taskList');
+    const todoForm = document.getElementById('todoForm');
+    const counter = document.getElementById('counter');
+    const quote = document.getElementById('quote');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const sortSelect = document.getElementById('sort');
+    const themeToggle = document.getElementById('themeToggle');
+    const dueDateInput = document.getElementById('dueDate');
+    const quotes = [
+      "You’ve got this! 💪",
+      "Keep up the great work! 🌟",
+      "Small steps lead to big results 🚀",
+      "Productivity looks good on you 🧠",
+      "You’re smashing it! 🧨"
+    ];
+    let todos = JSON.parse(localStorage.getItem('todos')) || [];
+    let filter = 'all';
+
+    const saveTodos = () => {
+      localStorage.setItem('todos', JSON.stringify(todos));
+    };
+
+    const renderTodos = () => {
+      taskList.innerHTML = '';
+      let filtered = todos.filter(todo => {
+        if (filter === 'active') return !todo.done;
+        if (filter === 'completed') return todo.done;
+        return true;
+      });
+
+      if (sortSelect.value === 'alpha') {
+        filtered.sort((a, b) => a.text.localeCompare(b.text));
+      } else {
+        filtered.sort((a, b) => new Date(b.created) - new Date(a.created));
+      }
+
+      filtered.forEach((todo, index) => {
+        const li = document.createElement('li');
+        li.className = 'bg-white dark:bg-gray-800 rounded px-4 py-2 flex justify-between items-center shadow';
+
+        const left = document.createElement('div');
+        left.className = 'flex-1';
+        const text = document.createElement('span');
+        text.textContent = todo.text + (todo.dueDate ? ` (due: ${todo.dueDate})` : '');
+        if (todo.done) text.classList.add('strike');
+        text.classList.add('cursor-pointer');
+        text.onclick = () => {
+          todo.done = !todo.done;
+          if (todo.done) showQuote();
+          checkConfetti();
+          saveTodos();
+          renderTodos();
+        };
+        left.appendChild(text);
+
+        const right = document.createElement('div');
+        right.className = 'flex items-center gap-2 ml-4';
+        const editBtn = document.createElement('button');
+        editBtn.textContent = '✏️';
+        editBtn.onclick = () => {
+          const newText = prompt('Edit task:', todo.text);
+          if (newText) {
+            todo.text = newText;
+            saveTodos();
+            renderTodos();
+          }
+        };
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '🗑️';
+        delBtn.onclick = () => {
+          todos.splice(index, 1);
+          saveTodos();
+          renderTodos();
+        };
+
+        right.appendChild(editBtn);
+        right.appendChild(delBtn);
+        li.appendChild(left);
+        li.appendChild(right);
+        taskList.appendChild(li);
+      });
+
+      updateCounter();
+    };
+
+    const updateCounter = () => {
+      const done = todos.filter(t => t.done).length;
+      counter.textContent = `${done} of ${todos.length} completed`;
+    };
+
+    const showQuote = () => {
+      const msg = quotes[Math.floor(Math.random() * quotes.length)];
+      quote.textContent = msg;
+    };
+
+    const checkConfetti = () => {
+      if (todos.length && todos.every(t => t.done)) {
+        launchConfetti();
+      }
+    };
+
+    todoForm.onsubmit = e => {
+      e.preventDefault();
+      const text = taskInput.value.trim();
+      if (text) {
+        todos.push({
+          text,
+          done: false,
+          created: new Date().toISOString(),
+          dueDate: dueDateInput.value || null
+        });
+        taskInput.value = '';
+        dueDateInput.value = '';
+        saveTodos();
+        renderTodos();
+      }
+    };
+
+    filterButtons.forEach(btn => {
+      btn.onclick = () => {
+        filter = btn.dataset.filter;
+        renderTodos();
+      };
+    });
+
+    sortSelect.onchange = renderTodos;
+
+    themeToggle.onclick = () => {
+      document.documentElement.classList.toggle('dark');
+      localStorage.setItem('theme', document.documentElement.classList.contains('dark') ? 'dark' : 'light');
+    };
+
+    // Load theme
+    if (localStorage.getItem('theme') === 'dark') {
+      document.documentElement.classList.add('dark');
+    }
+
+    renderTodos();
+
+    // Confetti 🎉
+    function launchConfetti() {
+      const canvas = document.getElementById('confettiCanvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+
+      let particles = Array.from({ length: 100 }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 6 + 4,
+        d: Math.random() * 100,
+        color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+        tilt: Math.floor(Math.random() * 10) - 10
+      }));
+
+      let angle = 0;
+      const draw = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        angle += 0.01;
+        for (let p of particles) {
+          p.y += Math.cos(angle + p.d) + 1 + p.r / 2;
+          p.x += Math.sin(angle) * 2;
+          ctx.beginPath();
+          ctx.fillStyle = p.color;
+          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      };
+
+      let interval = setInterval(draw, 20);
+      setTimeout(() => {
+        clearInterval(interval);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }, 3000);
+    }
+  </script>
 </body>
 </html>
