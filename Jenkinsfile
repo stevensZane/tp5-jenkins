@@ -55,7 +55,7 @@ pipeline {
                     # supprime le conteneur s'il existe
                     docker container rm $DOCKER_CONTAINER || true
                     # Lance un nouveau conteneur en mode détaché(en arrière-plan )
-                    docker container run -d --name $DOCKER_CONTAINER -p 8080:80 $DOCKER_IMAGE
+                    docker container run -d --name $DOCKER_CONTAINER -p 8081:80 $DOCKER_IMAGE
                     """
                 }
             }
